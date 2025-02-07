@@ -18,49 +18,60 @@ class _RegisterState extends State<Register> {
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+  bool _isLoading = false;
 
-  void _register() async {
-    if (_formKey.currentState!.validate()) {
-      if (_passwordController.text == _confirmPasswordController.text) {
-        try {
-          final response = await http.post(
-            Uri.parse('http://10.0.2.2:8000/api/register'),
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode({
-              'name': _nameController.text,
-              'email': _emailController.text,
-              'password': _passwordController.text,
-              'password_confirmation': _confirmPasswordController.text,
-            }),
-          );
+  // Fungsi untuk registrasi pengguna
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
 
-          print('Response status: ${response.statusCode}');
-          print('Response body: ${response.body}');
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sandi tidak cocok!')),
+      );
+      return;
+    }
 
-          if (response.statusCode == 200 || response.statusCode == 201) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Pendaftaran berhasil!')),
-            );
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => Home()),
-            );
-          } else {
-            final responseData = json.decode(response.body);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(responseData['message'] ?? 'Terjadi kesalahan')),
-            );
-          }
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Terjadi kesalahan saat menghubungi server')),
-          );
-        }
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:8000/api/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': _nameController.text,
+          'email': _emailController.text,
+          'password': _passwordController.text,
+          'password_confirmation': _confirmPasswordController.text,
+        }),
+      );
+
+      final responseData = json.decode(response.body);
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pendaftaran berhasil!')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Home()),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sandi tidak cocok!')),
+          SnackBar(content: Text(responseData['message'] ?? 'Terjadi kesalahan')),
         );
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Terjadi kesalahan saat menghubungi server')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -108,6 +119,7 @@ class _RegisterState extends State<Register> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Password tidak boleh kosong';
+                  if (value.length < 8) return 'Password harus minimal 8 karakter';
                   return null;
                 },
               ),
@@ -131,10 +143,12 @@ class _RegisterState extends State<Register> {
                 },
               ),
               SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _register,
-                child: Text('Daftar'),
-              ),
+              _isLoading
+                  ? CircularProgressIndicator()
+                  : ElevatedButton(
+                      onPressed: _register,
+                      child: Text('Daftar'),
+                    ),
               SizedBox(height: 10),
               GestureDetector(
                 onTap: () {
