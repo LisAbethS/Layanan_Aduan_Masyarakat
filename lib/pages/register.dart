@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'home.dart';
 import 'login.dart';
-import 'petugas.dart'; // Tambahkan halaman petugas
 
 class Register extends StatefulWidget {
   @override
@@ -16,8 +15,6 @@ class _RegisterState extends State<Register> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
-  String? _selectedRole;
-  final List<String> _roles = ['Petugas', 'User'];
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -34,27 +31,20 @@ class _RegisterState extends State<Register> {
               'email': _emailController.text,
               'password': _passwordController.text,
               'password_confirmation': _confirmPasswordController.text,
-              'role': _selectedRole,
             }),
           );
 
-          if (response.statusCode == 200) {
+          print('Response status: ${response.statusCode}');
+          print('Response body: ${response.body}');
+
+          if (response.statusCode == 200 || response.statusCode == 201) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Pendaftaran berhasil!')),
             );
-
-            // Navigasi sesuai role
-            if (_selectedRole == 'Petugas') {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => Petugas()),
-              );
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => Home()),
-              );
-            }
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => Home()),
+            );
           } else {
             final responseData = json.decode(response.body);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -137,26 +127,6 @@ class _RegisterState extends State<Register> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Konfirmasi password tidak boleh kosong';
-                  return null;
-                },
-              ),
-              SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: _selectedRole,
-                hint: Text('Pilih Role'),
-                items: _roles.map((role) {
-                  return DropdownMenuItem(
-                    value: role,
-                    child: Text(role),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedRole = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null) return 'Silakan pilih role';
                   return null;
                 },
               ),
