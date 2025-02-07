@@ -23,8 +23,9 @@ if (flutterVersionName == null) {
 }
 
 android {
+      // Gunakan compileSdkVersion 34 secara langsung
+    compileSdkVersion 34
     namespace "com.example.mewing_frontend"
-    compileSdkVersion flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
     compileOptions {

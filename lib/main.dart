@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'pages/register.dart'; // Import halaman register
 import 'pages/login.dart';
-import 'petugas/home1.dart';
 void main() {
   runApp(MyApp());
 }

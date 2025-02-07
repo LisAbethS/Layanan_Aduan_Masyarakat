@@ -1,238 +1,125 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'home.dart';
+import 'petugas.dart'; // Impor halaman Petugas
 import 'register.dart';
-import 'home.dart'; // Import halaman notifikasi yang sudah dibuat sebelumnya
-
 class Login extends StatefulWidget {
   @override
   _LoginState createState() => _LoginState();
 }
 
 class _LoginState extends State<Login> {
-  // Controllers untuk email dan password
-  TextEditingController _emailController = TextEditingController();
-  TextEditingController _passwordController = TextEditingController();
-
-  // State untuk menyembunyikan/memperlihatkan password
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
+
+  Future<void> _login() async {
+    if (_formKey.currentState!.validate()) {
+      final String apiUrl = 'http://10.0.2.2:8000/api/login';
+      try {
+        final response = await http.post(
+          Uri.parse(apiUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'email': _emailController.text,
+            'password': _passwordController.text,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          final role = responseData['role']; // Ambil role dari response
+          _showSnackbar('Login berhasil!');
+
+          // Navigasi sesuai dengan role
+          if (role == 'Petugas') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => Petugas()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => Home()),
+            );
+          }
+        } else {
+          final responseData = json.decode(response.body);
+          _showSnackbar(responseData['message'] ?? 'Login gagal');
+        }
+      } catch (e) {
+        _showSnackbar('Terjadi kesalahan saat menghubungi server.');
+      }
+    }
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header dengan warna biru tua
-            Container(
-              width: double.infinity,
-              height: 220,
-              decoration: BoxDecoration(
-                color: Colors.blue[900], // Warna biru tua untuk kesan tegas
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(40),
-                  bottomRight: Radius.circular(40),
-                ),
+      appBar: AppBar(title: Text('Login')),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Email tidak boleh kosong';
+                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'Email tidak valid';
+                  return null;
+                },
               ),
-              child: Stack(
-                children: [
-                  Align(
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.login,
-                          size: 70,
-                          color: Colors.white,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Selamat Datang',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Masuk untuk melanjutkan',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Formulir login
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Column(
-                children: [
-                  // Email Field
-                  _buildTextField(
-                    label: 'Email',
-                    hint: 'Masukan Email',
-                    icon: Icons.email,
-                    controller: _emailController,
-                  ),
-                  SizedBox(height: 16),
-
-                  // Password Field
-                  _buildPasswordField(
-                    label: 'Sandi',
-                    hint: 'Masukan Sandi',
-                    controller: _passwordController,
-                    isPasswordVisible: _isPasswordVisible,
-                    togglePasswordVisibility: () {
+              TextFormField(
+                controller: _passwordController,
+                obscureText: !_isPasswordVisible,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  suffixIcon: IconButton(
+                    icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () {
                       setState(() {
                         _isPasswordVisible = !_isPasswordVisible;
                       });
                     },
                   ),
-                  SizedBox(height: 24),
-
-                  // Tombol Masuk dengan warna biru muda
-                  ElevatedButton(
-                    onPressed: () {
-                      // Aksi saat tombol Masuk ditekan: Navigasi ke halaman Notifikasi
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => HomePage()
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      primary: Colors.blue, // Warna biru muda untuk tombol
-                      onPrimary: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      minimumSize: Size(double.infinity, 50),
-                    ),
-                    child: Text(
-                      'Masuk',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-
-                  // Tombol Login dengan Google
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: Icon(Icons.login, color: Colors.blue),
-                    label: Text(
-                      'Masuk dengan Google',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.blue),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      minimumSize: Size(double.infinity, 50),
-                    ),
-                  ),
-
-                  SizedBox(height: 16),
-
-                  // Teks "Belum punya akun?"
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("Belum punya akun? "),
-                      GestureDetector(
-                        onTap: () {
-                          // Pindah ke halaman Register
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => Register()),
-                          );
-                        },
-                        child: Text(
-                          'Daftar',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Password tidak boleh kosong';
+                  return null;
+                },
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Widget untuk membangun TextField
-  Widget _buildTextField({
-    required String label,
-    required String hint,
-    required IconData icon,
-    required TextEditingController controller,
-  }) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon, color: Colors.blue),
-        filled: true,
-        fillColor: Colors.grey[200],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-
-  // Widget untuk membangun Password Field
-  Widget _buildPasswordField({
-    required String label,
-    required String hint,
-    required TextEditingController controller,
-    required bool isPasswordVisible,
-    required VoidCallback togglePasswordVisibility,
-  }) {
-    return TextField(
-      controller: controller,
-      obscureText: !isPasswordVisible, // Menyembunyikan teks jika isPasswordVisible false
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(Icons.lock, color: Colors.blue),
-        suffixIcon: IconButton(
-          icon: Icon(
-            isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-            color: Colors.blue,
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _login,
+                child: Text('Masuk'),
+              ),
+              SizedBox(height: 10),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => Register()),
+                  );
+                },
+                child: Text(
+                  'Belum punya akun? Daftar',
+                  style: TextStyle(color: Colors.blue),
+                ),
+              ),
+            ],
           ),
-          onPressed: togglePasswordVisibility,
-        ),
-        filled: true,
-        fillColor: Colors.grey[200],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
         ),
       ),
     );
